@@ -1,27 +1,24 @@
+import core.GamePanel;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
-public class main extends JFrame {
+public class Main extends JFrame {
 
-    BufferedImage icon;
+    private BufferedImage icon;
 
-    {
-        try {
-            icon = ImageIO.read(getClass().getResourceAsStream("/entities/swan/swan.png"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+    public Main() {
+        loadIcon();
 
-
-    public main() {
         setTitle("Goose Chase");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
-        setIconImage(icon);
+
+        if (icon != null) {
+            setIconImage(icon);
+        }
 
         GamePanel gamePanel = new GamePanel();
         add(gamePanel);
@@ -34,7 +31,15 @@ public class main extends JFrame {
         gamePanel.startGameThread();
     }
 
+    private void loadIcon() {
+        try {
+            icon = ImageIO.read(getClass().getResourceAsStream("/entities/swan/swan.png"));
+        } catch (IOException | IllegalArgumentException e) {
+            System.out.println("[WARN] Could not load window icon.");
+        }
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(main::new);
+        SwingUtilities.invokeLater(Main::new);
     }
 }

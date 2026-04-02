@@ -1,15 +1,17 @@
+package input;
+
+import entity.EDirection;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.EnumSet;
 
-public class KeyHandler implements KeyListener {
+public class InputHandler implements KeyListener {
 
-    final EnumSet<EDirection> keysHeld = EnumSet.noneOf(EDirection.class);
-    public boolean upPressed, downPressed, leftPressed, rightPressed;
+    private final EnumSet<EDirection> keysHeld = EnumSet.noneOf(EDirection.class);
 
     @Override
     public void keyTyped(KeyEvent e) {
-        // leave empty
+        // unused
     }
 
     @Override
@@ -30,5 +32,9 @@ public class KeyHandler implements KeyListener {
             case KeyEvent.VK_S, KeyEvent.VK_DOWN -> keysHeld.remove(EDirection.DOWN);
             case KeyEvent.VK_A, KeyEvent.VK_LEFT -> keysHeld.remove(EDirection.LEFT);
         }
+    }
+
+    public boolean isHeld(EDirection direction) {
+        return keysHeld.contains(direction);
     }
 }
