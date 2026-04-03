@@ -7,10 +7,11 @@ import graphics.Camera;
 import graphics.SpriteLoader;
 import graphics.SpriteSet;
 import input.InputHandler;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import util.GameConstants;
 import world.World;
+
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 public class Player extends Entity {
 
@@ -34,18 +35,10 @@ public class Player extends Entity {
         double xInput = 0;
         double yInput = 0;
 
-        if (input.isHeld(EDirection.UP)) {
-            yInput -= 1;
-        }
-        if (input.isHeld(EDirection.DOWN)) {
-            yInput += 1;
-        }
-        if (input.isHeld(EDirection.LEFT)) {
-            xInput -= 1;
-        }
-        if (input.isHeld(EDirection.RIGHT)) {
-            xInput += 1;
-        }
+        if (input.isHeld(EDirection.UP)) yInput -= 1;
+        if (input.isHeld(EDirection.DOWN)) yInput += 1;
+        if (input.isHeld(EDirection.LEFT)) xInput -= 1;
+        if (input.isHeld(EDirection.RIGHT)) xInput += 1;
 
         if (xInput != 0 || yInput != 0) {
             double length = Math.sqrt((xInput * xInput) + (yInput * yInput));
@@ -59,9 +52,32 @@ public class Player extends Entity {
         }
 
         clampVelocity();
-        applyVelocityWithDrag();
+        moveWithCollision(world);
         world.clampEntityPosition(this, GameConstants.TILE_SIZE, GameConstants.TILE_SIZE);
         walkAnimation.update(isMoving());
+    }
+
+    private void moveWithCollision(World world) {
+        double nextX = x + xVelocity;
+        double nextY = y + yVelocity;
+
+        if (!world.collides(nextX, y, GameConstants.TILE_SIZE, GameConstants.TILE_SIZE)) {
+            x = nextX;
+        } else {
+            xVelocity = 0;
+        }
+
+        if (!world.collides(x, nextY, GameConstants.TILE_SIZE, GameConstants.TILE_SIZE)) {
+            y = nextY;
+        } else {
+            yVelocity = 0;
+        }
+
+        xVelocity *= drag;
+        yVelocity *= drag;
+
+        if (Math.abs(xVelocity) < 0.05) xVelocity = 0;
+        if (Math.abs(yVelocity) < 0.05) yVelocity = 0;
     }
 
     private void updateFacing(double xInput, double yInput) {
