@@ -5,8 +5,8 @@ public enum TerrainType {
     GRASS(1, 1, true),
     SAND(2, 2, false),
     STONE(3, 3, false),
-    WATER(4, 4, false),
-    SNOW(5, 5, false),
+    WATER(4, 4, true),
+    SNOW(5, 2, true),
     MUD(6, 6, false);
 
     private final int mapValue;

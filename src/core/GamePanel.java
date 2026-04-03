@@ -34,8 +34,8 @@ public class GamePanel extends JPanel implements Runnable {
         );
 
         player = new Player(
-                GameConstants.WORLD_WIDTH / 2.0,
-                GameConstants.WORLD_HEIGHT / 2.0
+                GameConstants.TILE_SIZE,
+                GameConstants.TILE_SIZE
         );
 
         camera = new Camera(
