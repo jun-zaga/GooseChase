@@ -7,11 +7,10 @@ import graphics.Camera;
 import graphics.SpriteLoader;
 import graphics.SpriteSet;
 import input.InputHandler;
-import util.GameConstants;
-import world.World;
-
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import util.GameConstants;
+import world.World;
 
 public class Player extends Entity {
 
@@ -28,7 +27,7 @@ public class Player extends Entity {
         this.facing = EDirection.DOWN;
 
         this.sprites = SpriteLoader.loadGooseSprites();
-        this.walkAnimation = new Animation(12, 2);
+        this.walkAnimation = new Animation(12);
     }
 
     public void update(InputHandler input, World world) {

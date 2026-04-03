@@ -59,7 +59,18 @@ public class TileMap {
     private BufferedImage loadImage(String path) {
         try {
             String fullPath = "src/assets" + path;
-            return ImageIO.read(new java.io.File(fullPath));
+            BufferedImage original = ImageIO.read(new java.io.File(fullPath));
+
+            BufferedImage scaled = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = scaled.createGraphics();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                    java.awt.RenderingHints.VALUE_ANTIALIAS_OFF);
+            g2.drawImage(original, 0, 0, tileSize, tileSize, null);
+            g2.dispose();
+
+            return scaled;
         } catch (Exception e) {
             throw new RuntimeException("Failed to load tile image: " + path, e);
         }
@@ -104,11 +115,21 @@ public class TileMap {
 
     public void draw(Graphics2D g2, Camera camera) {
 
-        int startCol = Math.max(0, camera.getX() / tileSize);
-        int endCol = Math.min(getCols(), (camera.getX() + GameConstants.SCREEN_WIDTH) / tileSize + 2);
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                java.awt.RenderingHints.VALUE_ANTIALIAS_OFF);
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING,
+                java.awt.RenderingHints.VALUE_RENDER_SPEED);
 
-        int startRow = Math.max(0, camera.getY() / tileSize);
-        int endRow = Math.min(getRows(), (camera.getY() + GameConstants.SCREEN_HEIGHT) / tileSize + 2);
+        int camX = camera.getX();
+        int camY = camera.getY();
+
+        int startCol = Math.max(0, camX / tileSize);
+        int endCol = Math.min(getCols(), (camX + GameConstants.SCREEN_WIDTH) / tileSize + 2);
+
+        int startRow = Math.max(0, camY / tileSize);
+        int endRow = Math.min(getRows(), (camY + GameConstants.SCREEN_HEIGHT) / tileSize + 2);
 
         for (int row = startRow; row < endRow; row++) {
             for (int col = startCol; col < endCol; col++) {
@@ -122,10 +143,10 @@ public class TileMap {
 
                 int worldX = col * tileSize;
                 int worldY = row * tileSize;
-                int screenX = camera.worldToScreenX(worldX);
-                int screenY = camera.worldToScreenY(worldY);
+                int screenX = worldX - camX;
+                int screenY = worldY - camY;
 
-                g2.drawImage(tile.getImage(), screenX, screenY, tileSize, tileSize, null);
+                g2.drawImage(tile.getImage(), screenX, screenY, null);
             }
         }
     }

@@ -31,4 +31,14 @@ public class SpriteSet {
     public BufferedImage[] getLeft() {
         return left;
     }
+
+    public BufferedImage getFrame(String direction, int frame) {
+        return switch (direction.toLowerCase()) {
+            case "up" -> up[frame];
+            case "right" -> right[frame];
+            case "down" -> down[frame];
+            case "left" -> left[frame];
+            default -> down[1];
+        };
+    }
 }
