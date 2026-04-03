@@ -30,8 +30,6 @@ public class GamePanel extends JPanel implements Runnable {
         addKeyListener(inputHandler);
 
         world = new World(
-                GameConstants.WORLD_WIDTH,
-                GameConstants.WORLD_HEIGHT,
                 GameConstants.TILE_SIZE
         );
 

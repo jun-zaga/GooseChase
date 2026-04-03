@@ -3,140 +3,357 @@ package world;
 public final class TerrainAutoTile {
 
     public static final int NONE = -1;
-
     public static final int FULL = 0;
 
-    public static final int INNER_TL = 14;
-    public static final int INNER_TR = 13;
-    public static final int INNER_BL = 16;
-    public static final int INNER_BR = 15;
+    // Inner names describe where the grass border is on the tile (concave)
+    public static final int INNER_TL = 1;
+    public static final int INNER_TR = 3;
+    public static final int INNER_BL = 6;
+    public static final int INNER_BR = 8;
 
+    // Standard edges
     public static final int EDGE_TOP = 7;
     public static final int EDGE_LEFT = 5;
     public static final int EDGE_RIGHT = 4;
     public static final int EDGE_BOTTOM = 2;
 
+    // Caps
     public static final int CAP_LEFT = 9;
     public static final int CAP_RIGHT = 10;
     public static final int CAP_TOP = 11;
     public static final int CAP_BOTTOM = 12;
 
-    public static final int OUTER_TL = 8;
-    public static final int OUTER_TR = 6;
-    public static final int OUTER_BL = 3;
-    public static final int OUTER_BR = 1;
+    // Outer names describe the exposed / empty corner (convex)
+    public static final int OUTER_TL = 13;
+    public static final int OUTER_TR = 14;
+    public static final int OUTER_BL = 15;
+    public static final int OUTER_BR = 16;
 
     public static final int PATCH = 17;
 
-    private static final boolean DEBUG_AUTOTILE = true;
+    // New combo outer-corner / edge-pair tiles
+    public static final int OUTER_ALL_CORNERS = 18;
+    public static final int OUTER_BL_TL_TR = 19;
+    public static final int OUTER_TL_TR = 20;
+    public static final int OUTER_TL_BL_BR = 21;
+    public static final int OUTER_BL_BR = 22;
+    public static final int OUTER_BL_BR_TR = 23;
+    public static final int OUTER_BR_TR = 24;
+    public static final int OUTER_TL_TR_BR = 25;
+    public static final int OUTER_TL_BL = 26;
+    public static final int OUTER_TL_BR = 27;
+    public static final int OUTER_TR_BL = 28;
+    public static final int EDGES_LEFT_RIGHT = 29;
+    public static final int EDGES_TOP_BOTTOM = 30;
+
+    // Mixed inner-corner + opposite isolated outer-corner
+    public static final int INNER_TL_OUTER_BR = 31;
+    public static final int INNER_TR_OUTER_BL = 32;
+    public static final int INNER_BL_OUTER_TR = 33;
+    public static final int INNER_BR_OUTER_TL = 34;
+
+    private static final boolean DEBUG_AUTOTILE = false;
 
     private TerrainAutoTile() { }
 
-    public static int getGrassOverlayIndex(int[][] terrainMap, int row, int col, int grassTerrainType) {
-        boolean centerGrass = isGrass(terrainMap, row, col, grassTerrainType);
+    public static int getOverlayIndex(TerrainType[][] terrainMap, int row, int col, TerrainType overlayType) {
+        if (!overlayType.isEnabled()) return NONE;
 
-        if (centerGrass) {
-            boolean top = isGrass(terrainMap, row - 1, col, grassTerrainType);
-            boolean right = isGrass(terrainMap, row, col + 1, grassTerrainType);
-            boolean bottom = isGrass(terrainMap, row + 1, col, grassTerrainType);
-            boolean left = isGrass(terrainMap, row, col - 1, grassTerrainType);
+        boolean center = isTerrain(terrainMap, row, col, overlayType);
 
-            boolean topLeft = isGrass(terrainMap, row - 1, col - 1, grassTerrainType);
-            boolean topRight = isGrass(terrainMap, row - 1, col + 1, grassTerrainType);
-            boolean bottomLeft = isGrass(terrainMap, row + 1, col - 1, grassTerrainType);
-            boolean bottomRight = isGrass(terrainMap, row + 1, col + 1, grassTerrainType);
+        boolean T  = isTerrain(terrainMap, row - 1, col,     overlayType);
+        boolean R  = isTerrain(terrainMap, row,     col + 1, overlayType);
+        boolean B  = isTerrain(terrainMap, row + 1, col,     overlayType);
+        boolean L  = isTerrain(terrainMap, row,     col - 1, overlayType);
 
-            int count = count(top, right, bottom, left);
-            int result;
+        boolean TL = isTerrain(terrainMap, row - 1, col - 1, overlayType);
+        boolean TR = isTerrain(terrainMap, row - 1, col + 1, overlayType);
+        boolean BL = isTerrain(terrainMap, row + 1, col - 1, overlayType);
+        boolean BR = isTerrain(terrainMap, row + 1, col + 1, overlayType);
 
-            if (count == 0) {
-                result = PATCH;
-            } else if (count == 4) {
-                if (!topLeft) result = INNER_BR;
-                else if (!topRight) result = INNER_BL;
-                else if (!bottomLeft) result = INNER_TR;
-                else if (!bottomRight) result = INNER_TL;
-                else result = FULL;
-            } else {
-                result = FULL;
-            }
+        // CENTER TILE IS THE OVERLAY TYPE
+        if (center) {
+            int count = count(T, R, B, L);
+            int result = (count == 0) ? PATCH : FULL;
 
             if (DEBUG_AUTOTILE) {
                 System.out.println(
-                    "[GRASS] row=" + row +
+                    "[CENTER] row=" + row +
                     " col=" + col +
-                    " center=1" +
-                    " | T=" + bit(top) +
-                    " R=" + bit(right) +
-                    " B=" + bit(bottom) +
-                    " L=" + bit(left) +
-                    " | TL=" + bit(topLeft) +
-                    " TR=" + bit(topRight) +
-                    " BL=" + bit(bottomLeft) +
-                    " BR=" + bit(bottomRight) +
-                    " | -> " + result + " (" + tileName(result) + ")"
+                    " | T=" + bit(T) +
+                    " R=" + bit(R) +
+                    " B=" + bit(B) +
+                    " L=" + bit(L) +
+                    " | TL=" + bit(TL) +
+                    " TR=" + bit(TR) +
+                    " BL=" + bit(BL) +
+                    " BR=" + bit(BR) +
+                    " | -> " + result
                 );
             }
 
             return result;
         }
 
-        boolean grassUp = isGrass(terrainMap, row - 1, col, grassTerrainType);
-        boolean grassRight = isGrass(terrainMap, row, col + 1, grassTerrainType);
-        boolean grassDown = isGrass(terrainMap, row + 1, col, grassTerrainType);
-        boolean grassLeft = isGrass(terrainMap, row, col - 1, grassTerrainType);
+        boolean upBlob = T && terrainCellHasCardinalNeighbor(terrainMap, row - 1, col, overlayType);
+        boolean rightBlob = R && terrainCellHasCardinalNeighbor(terrainMap, row, col + 1, overlayType);
+        boolean downBlob = B && terrainCellHasCardinalNeighbor(terrainMap, row + 1, col, overlayType);
+        boolean leftBlob = L && terrainCellHasCardinalNeighbor(terrainMap, row, col - 1, overlayType);
 
-        boolean upBlob = grassUp && grassCellHasGrassNeighbor(terrainMap, row - 1, col, grassTerrainType);
-        boolean rightBlob = grassRight && grassCellHasGrassNeighbor(terrainMap, row, col + 1, grassTerrainType);
-        boolean downBlob = grassDown && grassCellHasGrassNeighbor(terrainMap, row + 1, col, grassTerrainType);
-        boolean leftBlob = grassLeft && grassCellHasGrassNeighbor(terrainMap, row, col - 1, grassTerrainType);
+        boolean topLeftBlob = TL && terrainCellHasCardinalNeighbor(terrainMap, row - 1, col - 1, overlayType);
+        boolean topRightBlob = TR && terrainCellHasCardinalNeighbor(terrainMap, row - 1, col + 1, overlayType);
+        boolean bottomLeftBlob = BL && terrainCellHasCardinalNeighbor(terrainMap, row + 1, col - 1, overlayType);
+        boolean bottomRightBlob = BR && terrainCellHasCardinalNeighbor(terrainMap, row + 1, col + 1, overlayType);
 
         int result = NONE;
 
-        if (rightBlob && downBlob && !leftBlob && !upBlob) {
-            result = OUTER_TL;
-        } else if (leftBlob && downBlob && !rightBlob && !upBlob) {
-            result = OUTER_TR;
-        } else if (rightBlob && upBlob && !leftBlob && !downBlob) {
-            result = OUTER_BL;
-        } else if (leftBlob && upBlob && !rightBlob && !downBlob) {
-            result = OUTER_BR;
-        } else if (downBlob && !upBlob) {
-            result = EDGE_TOP;
-        } else if (upBlob && !downBlob) {
+        // 1) Opposite edge pairs
+        if (L && R && !T && !B) {
+            result = EDGES_LEFT_RIGHT;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (T && B && !L && !R) {
+            result = EDGES_TOP_BOTTOM;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        // 2) Straight edges
+        if (T && !B && !L && !R) {
             result = EDGE_BOTTOM;
-        } else if (rightBlob && !leftBlob) {
-            result = EDGE_LEFT;
-        } else if (leftBlob && !rightBlob) {
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (B && !T && !L && !R) {
+            result = EDGE_TOP;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (L && !R && !T && !B) {
             result = EDGE_RIGHT;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
         }
 
-        if (DEBUG_AUTOTILE) {
-            System.out.println(
-                "[BOUNDARY] row=" + row +
-                " col=" + col +
-                " center=0" +
-                " | U=" + bit(upBlob) +
-                " R=" + bit(rightBlob) +
-                " D=" + bit(downBlob) +
-                " L=" + bit(leftBlob) +
-                " | -> " + result +
-                (result == NONE ? " (NONE)" : " (" + tileName(result) + ")")
-            );
+        if (R && !L && !T && !B) {
+            result = EDGE_LEFT;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
         }
 
-        return result;
+        // 3) Caps
+        if (T && L && R && !B) {
+            result = CAP_TOP;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (B && L && R && !T) {
+            result = CAP_BOTTOM;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (T && B && L && !R) {
+            result = CAP_LEFT;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (T && B && R && !L) {
+            result = CAP_RIGHT;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        // 4) Mixed inner-corner + opposite isolated outer-corner
+        if (T && L && !B && !R && BR && !TR && !BL) {
+            result = INNER_TL_OUTER_BR;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (T && R && !B && !L && BL && !TL && !BR) {
+            result = INNER_TR_OUTER_BL;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (B && L && !T && !R && TR && !TL && !BR) {
+            result = INNER_BL_OUTER_TR;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (B && R && !T && !L && TL && !TR && !BL) {
+            result = INNER_BR_OUTER_TL;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        // 5) Standard inner corners
+        if (T && L && !B && !R) {
+            result = INNER_TL;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (T && R && !B && !L) {
+            result = INNER_TR;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (B && L && !T && !R) {
+            result = INNER_BL;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        if (B && R && !T && !L) {
+            result = INNER_BR;
+            return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                    topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+        }
+
+        // 6) Diagonal-only outer corner combos
+        if (!T && !R && !B && !L) {
+
+            if (topLeftBlob && topRightBlob && bottomLeftBlob && bottomRightBlob) {
+                result = OUTER_ALL_CORNERS;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (bottomLeftBlob && topLeftBlob && topRightBlob && !bottomRightBlob) {
+                result = OUTER_BL_TL_TR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topLeftBlob && bottomLeftBlob && bottomRightBlob && !topRightBlob) {
+                result = OUTER_TL_BL_BR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (bottomLeftBlob && bottomRightBlob && topRightBlob && !topLeftBlob) {
+                result = OUTER_BL_BR_TR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topLeftBlob && topRightBlob && bottomRightBlob && !bottomLeftBlob) {
+                result = OUTER_TL_TR_BR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topLeftBlob && topRightBlob && !bottomLeftBlob && !bottomRightBlob) {
+                result = OUTER_TL_TR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (bottomLeftBlob && bottomRightBlob && !topLeftBlob && !topRightBlob) {
+                result = OUTER_BL_BR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topLeftBlob && bottomLeftBlob && !topRightBlob && !bottomRightBlob) {
+                result = OUTER_TL_BL;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (bottomRightBlob && topRightBlob && !topLeftBlob && !bottomLeftBlob) {
+                result = OUTER_BR_TR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topLeftBlob && bottomRightBlob && !topRightBlob && !bottomLeftBlob) {
+                result = OUTER_TL_BR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topRightBlob && bottomLeftBlob && !topLeftBlob && !bottomRightBlob) {
+                result = OUTER_TR_BL;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topLeftBlob && !topRightBlob && !bottomLeftBlob && !bottomRightBlob) {
+                result = OUTER_BR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (topRightBlob && !topLeftBlob && !bottomLeftBlob && !bottomRightBlob) {
+                result = OUTER_BL;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (bottomLeftBlob && !topLeftBlob && !topRightBlob && !bottomRightBlob) {
+                result = OUTER_TR;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+
+            if (bottomRightBlob && !topLeftBlob && !topRightBlob && !bottomLeftBlob) {
+                result = OUTER_TL;
+                return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                        topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
+            }
+        }
+
+        return debugBoundary(row, col, upBlob, rightBlob, downBlob, leftBlob,
+                topLeftBlob, topRightBlob, bottomLeftBlob, bottomRightBlob, result);
     }
 
-    private static boolean grassCellHasGrassNeighbor(int[][] terrainMap, int row, int col, int grassTerrainType) {
-        if (!isGrass(terrainMap, row, col, grassTerrainType)) {
+    public static boolean isPatchInsideHigherTerrain(
+            TerrainType[][] terrainMap,
+            int row,
+            int col,
+            TerrainType centerType,
+            TerrainType surroundingType) {
+
+        if (!isTerrain(terrainMap, row, col, centerType)) return false;
+
+        boolean T = isTerrain(terrainMap, row - 1, col,     surroundingType);
+        boolean R = isTerrain(terrainMap, row,     col + 1, surroundingType);
+        boolean B = isTerrain(terrainMap, row + 1, col,     surroundingType);
+        boolean L = isTerrain(terrainMap, row,     col - 1, surroundingType);
+
+        return T && R && B && L;
+    }
+
+    private static boolean terrainCellHasCardinalNeighbor(
+            TerrainType[][] terrainMap,
+            int row,
+            int col,
+            TerrainType terrainType) {
+
+        if (!isTerrain(terrainMap, row, col, terrainType)) return false;
+
+        return isTerrain(terrainMap, row - 1, col, terrainType)
+            || isTerrain(terrainMap, row, col + 1, terrainType)
+            || isTerrain(terrainMap, row + 1, col, terrainType)
+            || isTerrain(terrainMap, row, col - 1, terrainType);
+    }
+
+    private static boolean isTerrain(TerrainType[][] terrainMap, int row, int col, TerrainType type) {
+        if (row < 0 || row >= terrainMap.length || col < 0 || col >= terrainMap[0].length) {
             return false;
         }
-
-        return isGrass(terrainMap, row - 1, col, grassTerrainType)
-            || isGrass(terrainMap, row, col + 1, grassTerrainType)
-            || isGrass(terrainMap, row + 1, col, grassTerrainType)
-            || isGrass(terrainMap, row, col - 1, grassTerrainType);
+        return terrainMap[row][col] == type;
     }
 
     private static int count(boolean... values) {
@@ -147,39 +364,39 @@ public final class TerrainAutoTile {
         return count;
     }
 
-    private static boolean isGrass(int[][] terrainMap, int row, int col, int grassTerrainType) {
-        if (row < 0 || row >= terrainMap.length || col < 0 || col >= terrainMap[0].length) {
-            return false;
-        }
-        return terrainMap[row][col] == grassTerrainType;
-    }
-
     private static String bit(boolean value) {
         return value ? "1" : "0";
     }
 
-    public static String tileName(int index) {
-        return switch (index) {
-            case NONE -> "NONE";
-            case FULL -> "FULL";
-            case INNER_TL -> "INNER_TL";
-            case INNER_TR -> "INNER_TR";
-            case INNER_BL -> "INNER_BL";
-            case INNER_BR -> "INNER_BR";
-            case EDGE_TOP -> "EDGE_TOP";
-            case EDGE_LEFT -> "EDGE_LEFT";
-            case EDGE_RIGHT -> "EDGE_RIGHT";
-            case EDGE_BOTTOM -> "EDGE_BOTTOM";
-            case CAP_LEFT -> "CAP_LEFT";
-            case CAP_RIGHT -> "CAP_RIGHT";
-            case CAP_TOP -> "CAP_TOP";
-            case CAP_BOTTOM -> "CAP_BOTTOM";
-            case OUTER_TL -> "OUTER_TL";
-            case OUTER_TR -> "OUTER_TR";
-            case OUTER_BL -> "OUTER_BL";
-            case OUTER_BR -> "OUTER_BR";
-            case PATCH -> "PATCH";
-            default -> "UNKNOWN";
-        };
+    private static int debugBoundary(
+            int row,
+            int col,
+            boolean upBlob,
+            boolean rightBlob,
+            boolean downBlob,
+            boolean leftBlob,
+            boolean topLeftBlob,
+            boolean topRightBlob,
+            boolean bottomLeftBlob,
+            boolean bottomRightBlob,
+            int result) {
+
+        if (DEBUG_AUTOTILE) {
+            System.out.println(
+                "[BOUNDARY] row=" + row +
+                " col=" + col +
+                " | U=" + bit(upBlob) +
+                " R=" + bit(rightBlob) +
+                " D=" + bit(downBlob) +
+                " L=" + bit(leftBlob) +
+                " | TL=" + bit(topLeftBlob) +
+                " TR=" + bit(topRightBlob) +
+                " BL=" + bit(bottomLeftBlob) +
+                " BR=" + bit(bottomRightBlob) +
+                " | -> " + result
+            );
+        }
+
+        return result;
     }
 }

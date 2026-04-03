@@ -9,27 +9,64 @@ import util.GameConstants;
 
 public class TerrainTileSet {
 
+    private static final int SOURCE_TILE_SIZE = 16;
+
     private final BufferedImage[] tiles;
     private final int tileSize;
 
-    public TerrainTileSet(String sheetPath) {
+    public TerrainTileSet(String fileName) {
         this.tileSize = GameConstants.TILE_SIZE;
-        this.tiles = loadSheet(sheetPath);
+        this.tiles = loadSheet(fileName);
     }
 
-    private BufferedImage[] loadSheet(String sheetPath) {
+    private BufferedImage[] loadSheet(String fileName) {
         try {
-            BufferedImage sheet = ImageIO.read(new File("src/assets/tiles/" + sheetPath));
-            BufferedImage[] result = new BufferedImage[18];
+            File file = new File("src/assets/tiles/" + fileName);
+            BufferedImage sheet = ImageIO.read(file);
 
-            for (int i = 0; i < 18; i++) {
-                BufferedImage raw = sheet.getSubimage(i * 16, 0, 16, 16);
+            if (sheet == null) {
+                throw new RuntimeException("ImageIO.read returned null for: " + file.getAbsolutePath());
+            }
+
+            if (sheet.getWidth() % SOURCE_TILE_SIZE != 0 || sheet.getHeight() % SOURCE_TILE_SIZE != 0) {
+                throw new RuntimeException(
+                    "Tile sheet dimensions must be divisible by " + SOURCE_TILE_SIZE +
+                    ". Got " + sheet.getWidth() + "x" + sheet.getHeight()
+                );
+            }
+
+            int cols = sheet.getWidth() / SOURCE_TILE_SIZE;
+            int rows = sheet.getHeight() / SOURCE_TILE_SIZE;
+            int totalTiles = cols * rows;
+
+            BufferedImage[] result = new BufferedImage[totalTiles];
+
+            for (int i = 0; i < totalTiles; i++) {
+                int col = i % cols;
+                int row = i / cols;
+
+                BufferedImage raw = sheet.getSubimage(
+                    col * SOURCE_TILE_SIZE,
+                    row * SOURCE_TILE_SIZE,
+                    SOURCE_TILE_SIZE,
+                    SOURCE_TILE_SIZE
+                );
+
                 result[i] = scaleTile(raw, tileSize);
             }
 
+            System.out.println(
+                "[TileSet] width=" + sheet.getWidth() +
+                ", height=" + sheet.getHeight() +
+                ", cols=" + cols +
+                ", rows=" + rows +
+                ", total=" + totalTiles
+            );
+
             return result;
+
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load tile sheet: " + sheetPath, e);
+            throw new RuntimeException("Failed to load tile sheet: " + fileName, e);
         }
     }
 
@@ -51,6 +88,15 @@ public class TerrainTileSet {
     }
 
     public BufferedImage get(int index) {
+        if (index < 0 || index >= tiles.length) {
+            throw new IllegalArgumentException(
+                "Tile index out of range: " + index + ", loaded tiles: " + tiles.length
+            );
+        }
         return tiles[index];
+    }
+
+    public int size() {
+        return tiles.length;
     }
 }
