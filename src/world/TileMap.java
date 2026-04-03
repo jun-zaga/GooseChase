@@ -4,75 +4,72 @@ import graphics.Camera;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
-import javax.imageio.ImageIO;
 import util.GameConstants;
 
 public class TileMap {
 
-    private final int[][] mapData;
-    private final Tile[] tiles;
+    public static final int DIRT = 0;
+    public static final int GRASS = 1;
+
+    private final int[][] terrainMap;
+    private final BufferedImage[][] bakedMap;
     private final int tileSize;
+
+    private final TerrainTileSet grassSet;
+    private final TerrainTileSet dirtSet;
 
     public TileMap() {
         this.tileSize = GameConstants.TILE_SIZE;
-        this.tiles = loadTiles();
-        this.mapData = loadMapFromCSV("/maps/Map_01.csv");
+        this.grassSet = new TerrainTileSet("grass_tiles.png");
+        this.dirtSet = new TerrainTileSet("dirt_tiles.png");
+        this.terrainMap = loadMapFromCSV("/maps/Map_03.csv");
+        this.bakedMap = new BufferedImage[getRows()][getCols()];
+
+        bakeEntireMap();
     }
 
-    private Tile[] loadTiles() {
-        Tile[] loadedTiles = new Tile[25];
+    private void bakeEntireMap() {
+        for (int row = 0; row < getRows(); row++) {
+            for (int col = 0; col < getCols(); col++) {
+                bakedMap[row][col] = buildTileImage(row, col);
+            }
+        }
+    }
 
-        // fallback so missing ids do not crash
-        for (int i = 0; i < loadedTiles.length; i++) {
-            loadedTiles[i] = new Tile(loadImage("/tiles/grass.png"), false);
+    private BufferedImage buildTileImage(int row, int col) {
+        BufferedImage result = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = result.createGraphics();
+
+        // Base dirt everywhere
+        g2.drawImage(dirtSet.get(TerrainAutoTile.FULL), 0, 0, null);
+
+        // Grass overlay on top
+        int overlay = TerrainAutoTile.getGrassOverlayIndex(terrainMap, row, col, GRASS);
+        if (overlay != TerrainAutoTile.NONE) {
+            g2.drawImage(grassSet.get(overlay), 0, 0, null);
         }
 
-        loadedTiles[0] = new Tile(loadImage("/tiles/dirt.png"), false);
-        loadedTiles[1] = new Tile(loadImage("/tiles/dirt_grass_outer_corner_bl.png"), false);
-        loadedTiles[2] = new Tile(loadImage("/tiles/dirt_grass_outer_corner_br.png"), false);
-        loadedTiles[3] = new Tile(loadImage("/tiles/dirt_grass_outer_corner_tl.png"), false);
-        loadedTiles[4] = new Tile(loadImage("/tiles/dirt_grass_outer_corner_tr.png"), false);
-        loadedTiles[5] = new Tile(loadImage("/tiles/dirt_grass_edge_bottom.png"), false);
-        loadedTiles[6] = new Tile(loadImage("/tiles/dirt_grass_edge_left.png"), false);
-        loadedTiles[7] = new Tile(loadImage("/tiles/dirt_grass_edge_right.png"), false);
-        loadedTiles[8] = new Tile(loadImage("/tiles/dirt_grass_edge_top.png"), false);
-        loadedTiles[9] = new Tile(loadImage("/tiles/grass.png"), false);
-
-        // 10 still unused unless you made one
-        // loadedTiles[10] = ...
-
-        loadedTiles[11] = new Tile(loadImage("/tiles/wood.png"), true);
-
-        loadedTiles[12] = new Tile(loadImage("/tiles/grass_dirt_inner_corner_br.png"), false);
-        loadedTiles[13] = new Tile(loadImage("/tiles/grass_dirt_inner_corner_bl.png"), false);
-        loadedTiles[14] = new Tile(loadImage("/tiles/grass_dirt_inner_corner_tr.png"), false);
-        loadedTiles[15] = new Tile(loadImage("/tiles/grass_dirt_inner_corner_tl.png"), false);
-        loadedTiles[16] = new Tile(loadImage("/tiles/grass_dirt_cap_left.png"), false);
-        loadedTiles[17] = new Tile(loadImage("/tiles/grass_dirt_cap_right.png"), false);
-        loadedTiles[18] = new Tile(loadImage("/tiles/grass_dirt_cap_top.png"), false);
-        loadedTiles[19] = new Tile(loadImage("/tiles/grass_dirt_cap_bottom.png"), false);
-        loadedTiles[20] = new Tile(loadImage("/tiles/grass_dirt_patch.png"), false);
-        return loadedTiles;
+        g2.dispose();
+        return result;
     }
 
-    private BufferedImage loadImage(String path) {
-        try {
-            String fullPath = "src/assets" + path;
-            BufferedImage original = ImageIO.read(new java.io.File(fullPath));
+    public void rebakeTile(int row, int col) {
+        if (row < 0 || row >= getRows() || col < 0 || col >= getCols()) {
+            return;
+        }
 
-            BufferedImage scaled = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2 = scaled.createGraphics();
-            g2.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
-                    java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
-                    java.awt.RenderingHints.VALUE_ANTIALIAS_OFF);
-            g2.drawImage(original, 0, 0, tileSize, tileSize, null);
-            g2.dispose();
+        bakedMap[row][col] = buildTileImage(row, col);
+    }
 
-            return scaled;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load tile image: " + path, e);
+    public void rebakeAround(int row, int col) {
+        for (int r = row - 1; r <= row + 1; r++) {
+            for (int c = col - 1; c <= col + 1; c++) {
+                if (r >= 0 && r < getRows() && c >= 0 && c < getCols()) {
+                    bakedMap[r][c] = buildTileImage(r, c);
+                }
+            }
         }
     }
 
@@ -81,10 +78,8 @@ public class TileMap {
         int cols = GameConstants.WORLD_COLS;
         int[][] map = new int[rows][cols];
 
-        try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    new java.io.FileInputStream("src/assets" + path)
-            ));
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(new FileInputStream("src/assets" + path)))) {
 
             String line;
             int row = 0;
@@ -104,8 +99,6 @@ public class TileMap {
                 row++;
             }
 
-            br.close();
-
         } catch (Exception e) {
             throw new RuntimeException("Failed to load map CSV: " + path, e);
         }
@@ -114,14 +107,6 @@ public class TileMap {
     }
 
     public void draw(Graphics2D g2, Camera camera) {
-
-        g2.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
-                java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
-                java.awt.RenderingHints.VALUE_ANTIALIAS_OFF);
-        g2.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING,
-                java.awt.RenderingHints.VALUE_RENDER_SPEED);
-
         int camX = camera.getX();
         int camY = camera.getY();
 
@@ -133,20 +118,10 @@ public class TileMap {
 
         for (int row = startRow; row < endRow; row++) {
             for (int col = startCol; col < endCol; col++) {
-                int tileId = mapData[row][col];
+                int screenX = (col * tileSize) - camX;
+                int screenY = (row * tileSize) - camY;
 
-                if (tileId < 0 || tileId >= tiles.length) {
-                    tileId = 9;
-                }
-
-                Tile tile = tiles[tileId];
-
-                int worldX = col * tileSize;
-                int worldY = row * tileSize;
-                int screenX = worldX - camX;
-                int screenY = worldY - camY;
-
-                g2.drawImage(tile.getImage(), screenX, screenY, null);
+                g2.drawImage(bakedMap[row][col], screenX, screenY, null);
             }
         }
     }
@@ -159,13 +134,7 @@ public class TileMap {
             return true;
         }
 
-        int tileId = mapData[row][col];
-
-        if (tileId < 0 || tileId >= tiles.length) {
-            return true;
-        }
-
-        return tiles[tileId].isSolid();
+        return false;
     }
 
     public boolean collidesWithSolidTile(double x, double y, int width, int height) {
@@ -176,10 +145,26 @@ public class TileMap {
     }
 
     public int getRows() {
-        return mapData.length;
+        return terrainMap.length;
     }
 
     public int getCols() {
-        return mapData[0].length;
+        return terrainMap[0].length;
+    }
+
+    public int getTerrainAt(int row, int col) {
+        if (row < 0 || row >= getRows() || col < 0 || col >= getCols()) {
+            return -1;
+        }
+        return terrainMap[row][col];
+    }
+
+    public void setTerrainAt(int row, int col, int terrain) {
+        if (row < 0 || row >= getRows() || col < 0 || col >= getCols()) {
+            return;
+        }
+
+        terrainMap[row][col] = terrain;
+        rebakeAround(row, col);
     }
 }

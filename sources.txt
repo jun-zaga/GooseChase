@@ -1,0 +1,16 @@
+C:\Users\jortt\Desktop\GooseChase\src\Main.java
+C:\Users\jortt\Desktop\GooseChase\src\core\GamePanel.java
+C:\Users\jortt\Desktop\GooseChase\src\entity\EDirection.java
+C:\Users\jortt\Desktop\GooseChase\src\entity\Entity.java
+C:\Users\jortt\Desktop\GooseChase\src\entity\player\Player.java
+C:\Users\jortt\Desktop\GooseChase\src\graphics\Animation.java
+C:\Users\jortt\Desktop\GooseChase\src\graphics\Camera.java
+C:\Users\jortt\Desktop\GooseChase\src\graphics\SpriteLoader.java
+C:\Users\jortt\Desktop\GooseChase\src\graphics\SpriteSet.java
+C:\Users\jortt\Desktop\GooseChase\src\input\InputHandler.java
+C:\Users\jortt\Desktop\GooseChase\src\util\GameConstants.java
+C:\Users\jortt\Desktop\GooseChase\src\world\TerrainAutoTile.java
+C:\Users\jortt\Desktop\GooseChase\src\world\TerrainTileSet.java
+C:\Users\jortt\Desktop\GooseChase\src\world\Tile.java
+C:\Users\jortt\Desktop\GooseChase\src\world\TileMap.java
+C:\Users\jortt\Desktop\GooseChase\src\world\World.java
