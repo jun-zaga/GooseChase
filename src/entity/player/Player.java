@@ -8,14 +8,24 @@ import graphics.SpriteLoader;
 import graphics.SpriteSet;
 import input.InputHandler;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import util.GameConstants;
 import world.World;
 
 public class Player extends Entity {
 
+    private static final int DRAW_SIZE = GameConstants.TILE_SIZE;
+
+    private static final int HITBOX_X = 8;
+    private static final int HITBOX_Y = 12;
+    private static final int HITBOX_W = 32;
+    private static final int HITBOX_H = 28;
+
     private final SpriteSet sprites;
     private final Animation walkAnimation;
+    private final Rectangle hitbox;
+    private final OrbitingInventory inventory;
 
     public Player(double startX, double startY) {
         this.x = startX;
@@ -25,9 +35,11 @@ public class Player extends Entity {
         this.speedCap = 4.0;
         this.drag = 0.82;
         this.facing = EDirection.DOWN;
+        this.inventory = new OrbitingInventory();
 
-        this.sprites = SpriteLoader.loadGooseSprites();
+        this.sprites = SpriteLoader.loadWalkingSprites("goose");
         this.walkAnimation = new Animation(12);
+        this.hitbox = new Rectangle(HITBOX_X, HITBOX_Y, HITBOX_W, HITBOX_H);
     }
 
     public void update(InputHandler input, World world) {
@@ -52,21 +64,29 @@ public class Player extends Entity {
 
         clampVelocity();
         moveWithCollision(world);
-        world.clampEntityPosition(this, GameConstants.TILE_SIZE, GameConstants.TILE_SIZE);
         walkAnimation.update(isMoving());
+    
+
+        if (input.consumeInteractPressed()) {
+            world.interactWithNearbyChick(this);
+        }
+
+
+        inventory.update();
+        world.tryPickupNearbyItems(this);
+
     }
 
     private void moveWithCollision(World world) {
         double nextX = x + xVelocity;
-        double nextY = y + yVelocity;
-
-        if (!world.collides(nextX, y, GameConstants.TILE_SIZE, GameConstants.TILE_SIZE)) {
+        if (!collidesAt(world, nextX, y)) {
             x = nextX;
         } else {
             xVelocity = 0;
         }
 
-        if (!world.collides(x, nextY, GameConstants.TILE_SIZE, GameConstants.TILE_SIZE)) {
+        double nextY = y + yVelocity;
+        if (!collidesAt(world, x, nextY)) {
             y = nextY;
         } else {
             yVelocity = 0;
@@ -77,6 +97,15 @@ public class Player extends Entity {
 
         if (Math.abs(xVelocity) < 0.05) xVelocity = 0;
         if (Math.abs(yVelocity) < 0.05) yVelocity = 0;
+    }
+
+    private boolean collidesAt(World world, double worldX, double worldY) {
+        return world.collides(
+                worldX + hitbox.x,
+                worldY + hitbox.y,
+                hitbox.width,
+                hitbox.height
+        );
     }
 
     private void updateFacing(double xInput, double yInput) {
@@ -93,7 +122,20 @@ public class Player extends Entity {
         int screenX = camera.worldToScreenX(x);
         int screenY = camera.worldToScreenY(y);
 
-        g2.drawImage(frame, screenX, screenY, GameConstants.TILE_SIZE, GameConstants.TILE_SIZE, null);
+        g2.drawImage(frame, screenX, screenY, DRAW_SIZE, DRAW_SIZE, null);
+
+        g2.drawRect(
+                screenX + hitbox.x,
+                screenY + hitbox.y,
+                hitbox.width,
+                hitbox.height
+        );
+
+        inventory.render(g2, camera, x, y);
+    }
+
+    public OrbitingInventory getInventory() {
+        return inventory;
     }
 
     private BufferedImage getCurrentFrame() {

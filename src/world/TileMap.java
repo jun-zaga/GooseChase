@@ -14,17 +14,11 @@ public class TileMap {
     private final BufferedImage[][] bakedMap;
     private final int tileSize;
 
-    private final TerrainTileSet dirtSet;
-    private final TerrainTileSet grassSet;
-    private final TerrainTileSet snowSet;
-    private final TerrainTileSet waterSet;
+    private final TerrainManager terrainManager;
 
     public TileMap() {
         this.tileSize = GameConstants.TILE_SIZE;
-        this.dirtSet = new TerrainTileSet("dirt_tiles.png");
-        this.grassSet = new TerrainTileSet("grass_tiles.png");
-        this.snowSet = new TerrainTileSet("snow_tiles.png");
-        this.waterSet = new TerrainTileSet("water_tiles.png");
+        this.terrainManager = new TerrainManager();
 
         this.terrainMap = loadMapFromCSV("/maps/Map_02.csv");
         this.bakedMap = new BufferedImage[getRows()][getCols()];
@@ -56,85 +50,73 @@ public class TileMap {
         return false;
     }
 
+    public boolean isSolidTile(int row, int col) {
+        if (isOutOfBounds(row, col)) return true;
+
+        TerrainType terrain = terrainMap[row][col];
+
+        return terrain == TerrainType.WATER;
+    }
+
     private BufferedImage buildTileImage(int row, int col) {
         BufferedImage result = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = result.createGraphics();
 
         TerrainType current = terrainMap[row][col];
 
-        // Base dirt everywhere
-        g2.drawImage(dirtSet.get(TerrainAutoTile.FULL), 0, 0, null);
+        // Always start with water as the lowest base layer
+        g2.drawImage(
+                terrainManager.getSet(TerrainType.WATER).get(TerrainAutoTile.FULL),
+                0,
+                0,
+                null
+        );
 
-        // Grass overlay
-        int grassIndex = TerrainAutoTile.getOverlayIndex(terrainMap, row, col, TerrainType.GRASS);
-        if (grassIndex != TerrainAutoTile.NONE) {
-            g2.drawImage(grassSet.get(grassIndex), 0, 0, null);
+        // Draw all higher terrains in enum order
+        for (TerrainType type : TerrainType.values()) {
+            if (type == TerrainType.WATER) continue;
+            if (!type.isEnabled()) continue;
+
+            int overlayIndex = TerrainAutoTile.getOverlayIndex(terrainMap, row, col, type);
+            if (overlayIndex == TerrainAutoTile.NONE) continue;
+
+            g2.drawImage(
+                    terrainManager.getSet(type).get(overlayIndex),
+                    0,
+                    0,
+                    null
+            );
         }
 
-        // Snow overlay
-        int snowIndex = TerrainAutoTile.getOverlayIndex(terrainMap, row, col, TerrainType.SNOW);
-        if (snowIndex != TerrainAutoTile.NONE) {
-            g2.drawImage(snowSet.get(snowIndex), 0, 0, null);
-        }
+        // Patch correction:
+        // if a single-tile patch is fully surrounded by a higher-priority terrain,
+        // redraw the surrounding full tile first, then the patch tile on top.
+        for (TerrainType centerType : TerrainType.values()) {
+            if (centerType == TerrainType.WATER) continue;
+            if (current != centerType) continue;
 
-        // Water overlay
-        int waterIndex = TerrainAutoTile.getOverlayIndex(terrainMap, row, col, TerrainType.WATER);
-        if (waterIndex != TerrainAutoTile.NONE) {
-            g2.drawImage(waterSet.get(waterIndex), 0, 0, null);
-        }
+            for (TerrainType surroundingType : TerrainType.values()) {
+                if (surroundingType.getPriority() <= centerType.getPriority()) continue;
+                if (!surroundingType.isEnabled()) continue;
 
-        // Dirt patch fully surrounded by grass
-        if (current == TerrainType.DIRT &&
-            TerrainAutoTile.isPatchInsideHigherTerrain(
-                terrainMap, row, col, TerrainType.DIRT, TerrainType.GRASS)) {
+                if (TerrainAutoTile.isPatchInsideHigherTerrain(
+                        terrainMap, row, col, centerType, surroundingType)) {
 
-            g2.drawImage(grassSet.get(TerrainAutoTile.FULL), 0, 0, null);
-            g2.drawImage(dirtSet.get(TerrainAutoTile.PATCH), 0, 0, null);
-        }
+                    g2.drawImage(
+                            terrainManager.getSet(surroundingType).get(TerrainAutoTile.FULL),
+                            0,
+                            0,
+                            null
+                    );
 
-        // Dirt patch fully surrounded by snow
-        if (current == TerrainType.DIRT &&
-            TerrainAutoTile.isPatchInsideHigherTerrain(
-                terrainMap, row, col, TerrainType.DIRT, TerrainType.SNOW)) {
-
-            g2.drawImage(snowSet.get(TerrainAutoTile.FULL), 0, 0, null);
-            g2.drawImage(dirtSet.get(TerrainAutoTile.PATCH), 0, 0, null);
-        }
-
-        // Dirt patch fully surrounded by water
-        if (current == TerrainType.DIRT &&
-            TerrainAutoTile.isPatchInsideHigherTerrain(
-                terrainMap, row, col, TerrainType.DIRT, TerrainType.WATER)) {
-
-            g2.drawImage(waterSet.get(TerrainAutoTile.FULL), 0, 0, null);
-            g2.drawImage(dirtSet.get(TerrainAutoTile.PATCH), 0, 0, null);
-        }
-
-        // Snow patch fully surrounded by grass
-        if (current == TerrainType.SNOW &&
-            TerrainAutoTile.isPatchInsideHigherTerrain(
-                terrainMap, row, col, TerrainType.SNOW, TerrainType.GRASS)) {
-
-            g2.drawImage(grassSet.get(TerrainAutoTile.FULL), 0, 0, null);
-            g2.drawImage(snowSet.get(TerrainAutoTile.PATCH), 0, 0, null);
-        }
-
-        // Water patch fully surrounded by grass
-        if (current == TerrainType.WATER &&
-            TerrainAutoTile.isPatchInsideHigherTerrain(
-                terrainMap, row, col, TerrainType.WATER, TerrainType.GRASS)) {
-
-            g2.drawImage(grassSet.get(TerrainAutoTile.FULL), 0, 0, null);
-            g2.drawImage(waterSet.get(TerrainAutoTile.PATCH), 0, 0, null);
-        }
-
-        // Water patch fully surrounded by snow
-        if (current == TerrainType.WATER &&
-            TerrainAutoTile.isPatchInsideHigherTerrain(
-                terrainMap, row, col, TerrainType.WATER, TerrainType.SNOW)) {
-
-            g2.drawImage(snowSet.get(TerrainAutoTile.FULL), 0, 0, null);
-            g2.drawImage(waterSet.get(TerrainAutoTile.PATCH), 0, 0, null);
+                    g2.drawImage(
+                            terrainManager.getSet(centerType).get(TerrainAutoTile.PATCH),
+                            0,
+                            0,
+                            null
+                    );
+                }
+            }
         }
 
         g2.dispose();
@@ -181,17 +163,20 @@ public class TileMap {
         int col = (int) (worldX / tileSize);
         int row = (int) (worldY / tileSize);
 
-        if (isOutOfBounds(row, col)) return true;
-
-        return terrainMap[row][col] == TerrainType.WATER;
+        return isSolidTile(row, col);
     }
 
     private boolean isOutOfBounds(int row, int col) {
         return row < 0 || row >= getRows() || col < 0 || col >= getCols();
     }
 
-    public int getRows() { return terrainMap.length; }
-    public int getCols() { return terrainMap[0].length; }
+    public int getRows() {
+        return terrainMap.length;
+    }
+
+    public int getCols() {
+        return terrainMap[0].length;
+    }
 
     private TerrainType[][] loadMapFromCSV(String path) {
         int rows = GameConstants.WORLD_ROWS;
@@ -200,7 +185,7 @@ public class TileMap {
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                map[r][c] = TerrainType.DIRT;
+                map[r][c] = TerrainType.WATER;
             }
         }
 

@@ -74,6 +74,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void updateGame() {
         player.update(inputHandler, world);
+        world.update(player);
         camera.centerOn(player.getX(), player.getY(), GameConstants.TILE_SIZE, GameConstants.TILE_SIZE);
     }
 

@@ -9,6 +9,8 @@ public class InputHandler implements KeyListener {
 
     private final EnumSet<EDirection> keysHeld = EnumSet.noneOf(EDirection.class);
 
+    private boolean interactPressed = false;
+
     @Override
     public void keyTyped(KeyEvent e) {
         // unused
@@ -21,6 +23,7 @@ public class InputHandler implements KeyListener {
             case KeyEvent.VK_D, KeyEvent.VK_RIGHT -> keysHeld.add(EDirection.RIGHT);
             case KeyEvent.VK_S, KeyEvent.VK_DOWN -> keysHeld.add(EDirection.DOWN);
             case KeyEvent.VK_A, KeyEvent.VK_LEFT -> keysHeld.add(EDirection.LEFT);
+            case KeyEvent.VK_E -> interactPressed = true;
         }
     }
 
@@ -36,5 +39,13 @@ public class InputHandler implements KeyListener {
 
     public boolean isHeld(EDirection direction) {
         return keysHeld.contains(direction);
+    }
+
+    public boolean consumeInteractPressed() {
+        if (interactPressed) {
+            interactPressed = false;
+            return true;
+        }
+        return false;
     }
 }

@@ -8,9 +8,9 @@ public final class SpriteLoader {
 
     private SpriteLoader() { }
 
-    public static SpriteSet loadGooseSprites() {
+    public static SpriteSet loadWalkingSprites(String entityName) {
         try {
-            BufferedImage sheet = loadSpriteSheet("/entities/goose/goose_walk_spritesheet.png");
+            BufferedImage sheet = loadSpriteSheet("/entities/" + entityName + "/" + entityName + "_walk_spritesheet.png");
 
             BufferedImage[] down = new BufferedImage[3];
             BufferedImage[] left = new BufferedImage[3];
@@ -39,7 +39,7 @@ public final class SpriteLoader {
             return new SpriteSet(up, right, down, left);
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load goose sprites", e);
+            throw new RuntimeException("Failed to load " + entityName + " walking sprites", e);
         }
     }
     
