@@ -13,8 +13,8 @@ public final class GameConstants {
     public static final int SCREEN_WIDTH = TILE_SIZE * SCREEN_COLS;
     public static final int SCREEN_HEIGHT = TILE_SIZE * SCREEN_ROWS;
 
-    public static final int WORLD_COLS = 35;
-    public static final int WORLD_ROWS = 67;
+    public static final int WORLD_COLS = 200;
+    public static final int WORLD_ROWS = 200;
     public static final int WORLD_WIDTH = TILE_SIZE * WORLD_COLS;
     public static final int WORLD_HEIGHT = TILE_SIZE * WORLD_ROWS;
 

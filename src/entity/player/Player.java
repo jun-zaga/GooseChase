@@ -22,10 +22,22 @@ public class Player extends Entity {
     private static final int HITBOX_W = 32;
     private static final int HITBOX_H = 28;
 
+    private static final int JUMP_DISTANCE_TILES = 2;
+    private static final int JUMP_DURATION_TICKS = 20;
+    private static final double JUMP_ARC_HEIGHT = 12.0;
+
     private final SpriteSet sprites;
     private final Animation walkAnimation;
     private final Rectangle hitbox;
     private final OrbitingInventory inventory;
+
+    private boolean jumping = false;
+    private int jumpTicks = 0;
+    private double jumpStartX;
+    private double jumpStartY;
+    private double jumpTargetX;
+    private double jumpTargetY;
+    private double jumpVisualOffsetY = 0;
 
     public Player(double startX, double startY) {
         this.x = startX;
@@ -43,6 +55,23 @@ public class Player extends Entity {
     }
 
     public void update(InputHandler input, World world) {
+        if (jumping) {
+            updateJump();
+            walkAnimation.update(false);
+
+            inventory.update();
+            world.tryPickupNearbyItems(this);
+
+            if (input.consumeInteractPressed()) {
+                world.interactWithNearbyChick(this);
+            }
+            return;
+        }
+
+        if (input.consumeJumpPressed()) {
+            tryStartJump(input, world);
+        }
+
         double xInput = 0;
         double yInput = 0;
 
@@ -65,16 +94,91 @@ public class Player extends Entity {
         clampVelocity();
         moveWithCollision(world);
         walkAnimation.update(isMoving());
-    
 
         if (input.consumeInteractPressed()) {
             world.interactWithNearbyChick(this);
         }
 
-
         inventory.update();
         world.tryPickupNearbyItems(this);
+    }
 
+    private void tryStartJump(InputHandler input, World world) {
+        int tileSize = world.getTileSize();
+        double jumpDistance = tileSize * JUMP_DISTANCE_TILES;
+
+        int dirX = 0;
+        int dirY = 0;
+
+        if (input.isHeld(EDirection.LEFT)) dirX -= 1;
+        if (input.isHeld(EDirection.RIGHT)) dirX += 1;
+        if (input.isHeld(EDirection.UP)) dirY -= 1;
+        if (input.isHeld(EDirection.DOWN)) dirY += 1;
+
+        // no input held: fall back to facing
+        if (dirX == 0 && dirY == 0) {
+            switch (facing) {
+                case UP -> dirY = -1;
+                case DOWN -> dirY = 1;
+                case LEFT -> dirX = -1;
+                case RIGHT -> dirX = 1;
+            }
+        }
+
+        double dx = dirX * jumpDistance;
+        double dy = dirY * jumpDistance;
+
+        double targetX = x + dx;
+        double targetY = y + dy;
+
+        if (canLandAt(world, targetX, targetY)) {
+            jumping = true;
+            jumpTicks = 0;
+
+            jumpStartX = x;
+            jumpStartY = y;
+            jumpTargetX = targetX;
+            jumpTargetY = targetY;
+
+            xVelocity = 0;
+            yVelocity = 0;
+
+            if (dirX != 0 || dirY != 0) {
+                updateFacing(dirX, dirY);
+            }
+        }
+    }
+
+    private boolean canLandAt(World world, double targetX, double targetY) {
+        return !world.collides(
+                targetX + hitbox.x,
+                targetY + hitbox.y,
+                hitbox.width,
+                hitbox.height
+        );
+    }
+
+    private void updateJump() {
+        jumpTicks++;
+
+        double progress = (double) jumpTicks / JUMP_DURATION_TICKS;
+        if (progress > 1.0) progress = 1.0;
+
+        x = lerp(jumpStartX, jumpTargetX, progress);
+        y = lerp(jumpStartY, jumpTargetY, progress);
+
+        jumpVisualOffsetY = Math.sin(progress * Math.PI) * JUMP_ARC_HEIGHT;
+
+        if (jumpTicks >= JUMP_DURATION_TICKS) {
+            x = jumpTargetX;
+            y = jumpTargetY;
+            jumpVisualOffsetY = 0;
+            jumping = false;
+        }
+    }
+
+    private double lerp(double a, double b, double t) {
+        return a + ((b - a) * t);
     }
 
     private void moveWithCollision(World world) {
@@ -120,13 +224,13 @@ public class Player extends Entity {
         BufferedImage frame = getCurrentFrame();
 
         int screenX = camera.worldToScreenX(x);
-        int screenY = camera.worldToScreenY(y);
+        int screenY = camera.worldToScreenY(y - jumpVisualOffsetY);
 
         g2.drawImage(frame, screenX, screenY, DRAW_SIZE, DRAW_SIZE, null);
 
         g2.drawRect(
-                screenX + hitbox.x,
-                screenY + hitbox.y,
+                camera.worldToScreenX(x) + hitbox.x,
+                camera.worldToScreenY(y) + hitbox.y,
                 hitbox.width,
                 hitbox.height
         );
@@ -136,6 +240,10 @@ public class Player extends Entity {
 
     public OrbitingInventory getInventory() {
         return inventory;
+    }
+
+    public boolean isJumping() {
+        return jumping;
     }
 
     private BufferedImage getCurrentFrame() {

@@ -10,6 +10,7 @@ public class InputHandler implements KeyListener {
     private final EnumSet<EDirection> keysHeld = EnumSet.noneOf(EDirection.class);
 
     private boolean interactPressed = false;
+    private boolean jumpPressed = false;
 
     @Override
     public void keyTyped(KeyEvent e) {
@@ -24,6 +25,7 @@ public class InputHandler implements KeyListener {
             case KeyEvent.VK_S, KeyEvent.VK_DOWN -> keysHeld.add(EDirection.DOWN);
             case KeyEvent.VK_A, KeyEvent.VK_LEFT -> keysHeld.add(EDirection.LEFT);
             case KeyEvent.VK_E -> interactPressed = true;
+            case KeyEvent.VK_SPACE -> jumpPressed = true;
         }
     }
 
@@ -44,6 +46,14 @@ public class InputHandler implements KeyListener {
     public boolean consumeInteractPressed() {
         if (interactPressed) {
             interactPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeJumpPressed() {
+        if (jumpPressed) {
+            jumpPressed = false;
             return true;
         }
         return false;

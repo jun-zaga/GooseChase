@@ -23,6 +23,7 @@ public class Chick extends Entity {
     private static final double FOLLOW_SPEED = 1.8;
     private static final double STOP_DISTANCE = 30.0;
     private static final double INTERACT_DISTANCE = 42.0;
+    private static final double TELEPORT_DISTANCE = GameConstants.TILE_SIZE * 10.0;
 
     private final SpriteSet sprites;
     private final Animation walkAnimation;
@@ -46,6 +47,7 @@ public class Chick extends Entity {
 
     public void update(Player player, World world) {
         if (following) {
+            teleportToPlayerIfTooFar(player, world);
             followPlayer(player);
         } else {
             xVelocity *= drag;
@@ -76,6 +78,46 @@ public class Chick extends Entity {
 
         updateFacingFromVelocity();
         walkAnimation.update(isMoving());
+    }
+
+    private void teleportToPlayerIfTooFar(Player player, World world) {
+        double dx = player.getX() - x;
+        double dy = player.getY() - y;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance <= TELEPORT_DISTANCE) {
+            return;
+        }
+
+        double[][] offsets = {
+            {-GameConstants.TILE_SIZE, 0},
+            { GameConstants.TILE_SIZE, 0},
+            {0, -GameConstants.TILE_SIZE},
+            {0,  GameConstants.TILE_SIZE},
+            {-GameConstants.TILE_SIZE, -GameConstants.TILE_SIZE},
+            { GameConstants.TILE_SIZE, -GameConstants.TILE_SIZE},
+            {-GameConstants.TILE_SIZE,  GameConstants.TILE_SIZE},
+            { GameConstants.TILE_SIZE,  GameConstants.TILE_SIZE}
+        };
+
+        for (double[] offset : offsets) {
+            double targetX = player.getX() + offset[0];
+            double targetY = player.getY() + offset[1];
+
+            if (!collidesAt(world, targetX, targetY)
+                    && !collidesWithOtherChicksAt(world, targetX, targetY)) {
+                x = targetX;
+                y = targetY;
+                xVelocity = 0;
+                yVelocity = 0;
+                return;
+            }
+        }
+
+        x = player.getX();
+        y = player.getY();
+        xVelocity = 0;
+        yVelocity = 0;
     }
 
     private void followPlayer(Player player) {
@@ -179,7 +221,6 @@ public class Chick extends Entity {
             g2.drawString("E", screenX + 16, screenY - 4);
         }
 
-        // debug hitbox
         g2.drawRect(
                 screenX + hitbox.x,
                 screenY + hitbox.y,
